@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ZZP-ers in Rotterdam — Interactieve kaart</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+  <style>
+    /* Override for embed mode — no scrollytelling, just the interactive map */
+    body { opacity: 1; }
+    .embed-page {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 24px 24px 40px;
+    }
+    .embed-title {
+      font-size: 28px;
+      font-weight: 500;
+      margin-bottom: 4px;
+    }
+    .embed-subtitle {
+      font-size: 15px;
+      font-style: italic;
+      color: #7A8694;
+      margin-bottom: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="embed-page">
+    <h1 class="embed-title">ZZP-ers in Rotterdam</h1>
+    <p class="embed-subtitle">Klik op een buurt voor details. Wissel van jaar om de verandering te zien.</p>
+
+    <div class="hero-container">
+      <canvas id="explore-canvas"></canvas>
+      <div id="explore-year-overlay" class="year-overlay">2022</div>
+    </div>
+
+    <div class="controls">
+      <div class="legend">
+        <span class="legend-label">Minder ZZP-ers</span>
+        <div class="legend-gradient"></div>
+        <span class="legend-label">Meer ZZP-ers</span>
+      </div>
+      <div id="stats-display" class="stats-display"></div>
+    </div>
+
+    <div class="year-controls">
+      <div id="year-selector" class="year-selector"></div>
+    </div>
+
+    <footer class="footer" style="margin-top: 20px;">
+      <p>Bronnen: <a href="https://www.cbs.nl/nl-nl/cijfers/detail/85984NED" target="_blank">CBS Kerncijfers 2022</a> · <a href="https://rotterdam.dataplatform.nl/#/data/zzpers" target="_blank">Rotterdam Dataplatform</a> · <a href="https://www.kvk.nl/cijfers-en-trends/kvk-zzp-monitor-zo-ontwikkelt-het-aantal-zzpers-in-nederland/" target="_blank">KVK ZZP-monitor</a></p>
+    </footer>
+  </div>
+
+  <div id="tooltip" class="tooltip"></div>
+
+  <script type="module" src="/src/embed.js"></script>
+</body>
+</html>

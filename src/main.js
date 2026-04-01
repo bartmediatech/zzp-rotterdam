@@ -105,6 +105,12 @@ function handleStepEnter({ element }) {
       // Year is controlled by handleStepProgress, start at 2009
       drawScrollyYear(2009);
     } else if (step === '2022') {
+      // Show 2022 and highlight top buurten
+      drawScrollyYear(2022);
+      overlay.textContent = '2022';
+      highlightNeighbourhoods(['Molenlaankwartier', 'Terbregge', 'Hillegersberg Zuid'], '#5A6B7A');
+      annotation.textContent = 'Buurten met het hoogste ZZP-aandeel (2022)';
+    } else if (step === 'transition') {
       drawScrollyYear(2022);
       overlay.textContent = '2022';
     }

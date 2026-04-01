@@ -119,7 +119,8 @@ body.loaded {
 .step {
   min-height: 70vh;
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  justify-content: center;
   padding: 20px 0;
 }
 
@@ -127,6 +128,10 @@ body.loaded {
   font-size: clamp(17px, 2vw, 21px);
   line-height: 1.65;
   color: #3A4450;
+  max-width: 400px;
+}
+
+.step > .step-source {
   max-width: 400px;
 }
 
