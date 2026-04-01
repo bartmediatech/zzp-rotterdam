@@ -1,0 +1,399 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'EB Garamond', 'Georgia', serif;
+  background: #F5F0E8;
+  color: #2C3440;
+  opacity: 0;
+  transition: opacity 0.6s ease;
+}
+
+body.loaded {
+  opacity: 1;
+}
+
+.page {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 48px 40px 60px;
+}
+
+/* Header */
+.header {
+  margin-bottom: 32px;
+}
+
+.title {
+  font-size: 42px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  color: #2C3440;
+  line-height: 1.1;
+  margin-bottom: 8px;
+}
+
+.subtitle {
+  font-size: 18px;
+  font-style: italic;
+  font-weight: 400;
+  color: #7A8694;
+  line-height: 1.4;
+}
+
+/* Hero Map */
+.hero-container {
+  position: relative;
+  margin-bottom: 20px;
+  border: 1px solid #D4CFC4;
+  background: #F5F0E8;
+  display: flex;
+  justify-content: center;
+}
+
+#hero-canvas {
+  display: block;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Year overlay on map */
+.year-overlay {
+  position: absolute;
+  bottom: 16px;
+  right: 20px;
+  font-family: 'EB Garamond', serif;
+  font-size: 64px;
+  font-weight: 500;
+  color: rgba(44, 52, 64, 0.08);
+  pointer-events: none;
+  user-select: none;
+  line-height: 1;
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  padding: 0 4px;
+}
+
+.legend {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.legend-label {
+  font-size: 12px;
+  font-style: italic;
+  color: #7A8694;
+}
+
+.legend-gradient {
+  width: 120px;
+  height: 8px;
+  border-radius: 4px;
+  background: linear-gradient(to right, #B8C4D4, #5A6B7A, #2C3E50, #8B1A1A);
+  border: 1px solid #D4CFC4;
+}
+
+.stats-display {
+  font-size: 15px;
+  color: #7A8694;
+}
+
+.stats-display strong {
+  color: #2C3440;
+  font-weight: 600;
+}
+
+/* Year Controls */
+.year-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 36px;
+}
+
+.play-pause {
+  font-family: 'EB Garamond', serif;
+  font-size: 14px;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #D4CFC4;
+  background: transparent;
+  color: #7A8694;
+  cursor: pointer;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.play-pause:hover {
+  color: #2C3440;
+  border-color: #7A8694;
+}
+
+.year-selector {
+  display: flex;
+  gap: 4px;
+}
+
+.year-btn {
+  font-family: 'EB Garamond', serif;
+  font-size: 16px;
+  padding: 8px 16px;
+  border: 1px solid #D4CFC4;
+  background: transparent;
+  color: #7A8694;
+  cursor: pointer;
+  transition: all 0.2s;
+  border-radius: 2px;
+}
+
+.year-btn:hover {
+  color: #2C3440;
+  border-color: #7A8694;
+}
+
+.year-btn.active {
+  color: #C0392B;
+  border-color: #C0392B;
+  font-weight: 600;
+}
+
+/* Small Multiples */
+.sm-section {
+  margin-bottom: 36px;
+}
+
+.sm-title {
+  font-size: 13px;
+  font-style: italic;
+  color: #A0AAB4;
+  margin-bottom: 10px;
+  text-transform: lowercase;
+}
+
+.small-multiples {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.sm-item {
+  cursor: pointer;
+  text-align: center;
+  transition: transform 0.2s;
+  border: 1px solid transparent;
+  padding: 3px;
+  border-radius: 2px;
+}
+
+.sm-item:hover {
+  transform: scale(1.05);
+}
+
+.sm-item.active {
+  border-color: #C0392B;
+}
+
+.sm-canvas {
+  display: block;
+  border: 1px solid #D4CFC4;
+}
+
+.sm-label {
+  display: block;
+  font-size: 11px;
+  color: #A0AAB4;
+  margin-top: 3px;
+}
+
+.sm-item.active .sm-label {
+  color: #C0392B;
+  font-weight: 600;
+}
+
+/* Footer */
+.footer {
+  text-align: center;
+  padding-top: 20px;
+  border-top: 1px solid #D4CFC4;
+}
+
+.footer p {
+  font-size: 12px;
+  font-style: italic;
+  color: #A0AAB4;
+}
+
+/* Tooltip */
+.tooltip {
+  display: none;
+  position: fixed;
+  background: #F5F0E8;
+  border: 1px solid #D4CFC4;
+  box-shadow: 0 4px 16px rgba(44, 52, 64, 0.1);
+  padding: 12px 16px;
+  z-index: 1000;
+  pointer-events: none;
+  min-width: 180px;
+  border-radius: 2px;
+  transition: opacity 0.15s;
+}
+
+.tooltip.locked {
+  pointer-events: auto;
+  border-color: #C0392B;
+  box-shadow: 0 6px 24px rgba(44, 52, 64, 0.15);
+}
+
+.tt-name {
+  font-size: 16px;
+  font-weight: 500;
+  color: #2C3440;
+  margin-bottom: 2px;
+}
+
+.tt-year {
+  font-size: 12px;
+  font-style: italic;
+  color: #A0AAB4;
+  margin-bottom: 8px;
+}
+
+.tt-stats {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.tt-zzp {
+  font-size: 14px;
+  color: #2C3E50;
+  font-weight: 500;
+}
+
+.tt-ratio {
+  font-size: 13px;
+  color: #C0392B;
+  font-style: italic;
+}
+
+.tt-total {
+  font-size: 12px;
+  color: #A0AAB4;
+  margin-top: 4px;
+}
+
+.tt-close {
+  position: absolute;
+  top: 6px;
+  right: 8px;
+  font-size: 12px;
+  color: #A0AAB4;
+  cursor: pointer;
+  line-height: 1;
+}
+
+.tt-close:hover {
+  color: #2C3440;
+}
+
+.tt-growth {
+  margin-top: 8px;
+  padding-top: 6px;
+  border-top: 1px solid #E8E0D4;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  align-items: baseline;
+}
+
+.tt-growth-label {
+  font-size: 11px;
+  color: #A0AAB4;
+  font-style: italic;
+}
+
+.tt-growth-value {
+  font-size: 14px;
+  font-weight: 600;
+  font-family: 'EB Garamond', serif;
+}
+
+.tt-growth-rel {
+  font-size: 11px;
+  font-style: italic;
+}
+
+.tt-sparkline {
+  margin-top: 10px;
+  padding-top: 8px;
+  border-top: 1px solid #E8E0D4;
+}
+
+.tt-sparkline svg {
+  display: block;
+}
+
+.tt-spark-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 9px;
+  color: #A0AAB4;
+  font-family: 'EB Garamond', serif;
+  margin-top: 2px;
+}
+
+.tt-spark-caption {
+  font-size: 9px;
+  font-style: italic;
+  color: #A0AAB4;
+  margin-top: 2px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .page {
+    padding: 24px 16px 40px;
+  }
+
+  .title {
+    font-size: 28px;
+  }
+
+  .subtitle {
+    font-size: 15px;
+  }
+
+  .controls {
+    flex-direction: column;
+    gap: 12px;
+    align-items: flex-start;
+  }
+
+  .year-selector {
+    flex-wrap: wrap;
+  }
+
+  .year-btn {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+
+  .small-multiples {
+    gap: 4px;
+  }
+}
