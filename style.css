@@ -75,6 +75,7 @@ body.loaded {
   justify-content: center;
   flex-shrink: 0;
   background: #F5F0E8;
+  overflow: hidden;
 }
 
 .scrolly-map canvas {
@@ -142,8 +143,34 @@ body.loaded {
   color: #2C3E50;
 }
 
+/* Tall step — scroll within this step controls the year animation */
+.step-tall {
+  min-height: 200vh;
+}
+
 /* Step active state (for visual feedback) */
 .step.is-active p {
+  color: #2C3440;
+}
+
+/* Inline source citation */
+.step-source {
+  display: block;
+  margin-top: 12px;
+  font-size: 12px;
+  font-style: italic;
+  color: #A0AAB4;
+  line-height: 1.4;
+}
+
+.step-source a {
+  color: #7A8694;
+  text-decoration: underline;
+  text-decoration-color: #D4CFC4;
+  text-underline-offset: 2px;
+}
+
+.step-source a:hover {
   color: #2C3440;
 }
 
@@ -291,6 +318,17 @@ body.loaded {
   font-size: 12px;
   font-style: italic;
   color: #A0AAB4;
+}
+
+.footer a {
+  color: #7A8694;
+  text-decoration: underline;
+  text-decoration-color: #D4CFC4;
+  text-underline-offset: 2px;
+}
+
+.footer a:hover {
+  color: #2C3440;
 }
 
 .footer-meta {

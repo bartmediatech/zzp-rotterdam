@@ -64,9 +64,24 @@ function setupScrollama() {
     .setup({
       step: '.step',
       offset: 0.5,
+      progress: true,
       debug: false,
     })
-    .onStepEnter(handleStepEnter);
+    .onStepEnter(handleStepEnter)
+    .onStepProgress(handleStepProgress);
+}
+
+// Scroll-controlled year scrubbing for Act 1
+function handleStepProgress({ element, progress }) {
+  const act = element.dataset.act;
+  const step = element.dataset.step;
+
+  if (act === '1' && step === 'scrub') {
+    // Map scroll progress (0-1) to year index (0 = 2009, 9 = 2022)
+    const yearIndex = Math.min(YEARS.length - 1, Math.floor(progress * YEARS.length));
+    const year = YEARS[yearIndex];
+    drawScrollyYear(year);
+  }
 }
 
 function handleStepEnter({ element }) {
@@ -81,13 +96,14 @@ function handleStepEnter({ element }) {
   const annotation = document.getElementById('map-annotation');
 
   if (act === '1') {
+    resetMapTransform();
     annotation.textContent = '';
     if (step === 'intro') {
       drawScrollyYear(2009);
       overlay.textContent = '2009';
-    } else if (step === 'animate') {
-      // Animate through years quickly
-      animateYears(2009, 2022, 3000);
+    } else if (step === 'scrub') {
+      // Year is controlled by handleStepProgress, start at 2009
+      drawScrollyYear(2009);
     } else if (step === '2022') {
       drawScrollyYear(2022);
       overlay.textContent = '2022';
@@ -96,11 +112,19 @@ function handleStepEnter({ element }) {
 
   else if (act === '2') {
     overlay.textContent = '2022';
-    if (step === 'reveal' || step === 'top5') {
+    if (step === 'reveal') {
+      resetMapTransform();
+      drawScrollyYear(2022);
+      highlightNeighbourhoods(TOP_GROWTH, '#8B1A1A');
+      annotation.textContent = 'Gemarkeerd: buurten met de sterkste ZZP-groei';
+    } else if (step === 'top5') {
+      // Zoom into Rotterdam-Zuid where the top growth buurten are
+      zoomToSouth();
       drawScrollyYear(2022);
       highlightNeighbourhoods(TOP_GROWTH, '#8B1A1A');
       annotation.textContent = 'Gemarkeerd: buurten met de sterkste ZZP-groei';
     } else if (step === 'bottom') {
+      resetMapTransform();
       drawScrollyYear(2022);
       highlightNeighbourhoods(BOTTOM_GROWTH, '#5A6B7A');
       annotation.textContent = 'Gemarkeerd: buurten met de minste ZZP-groei';
@@ -108,6 +132,7 @@ function handleStepEnter({ element }) {
   }
 
   else if (act === '3') {
+    resetMapTransform();
     overlay.textContent = '2022';
     annotation.textContent = '';
     if (step === 'recolor') {
@@ -124,6 +149,7 @@ function handleStepEnter({ element }) {
   }
 
   else if (act === '4') {
+    resetMapTransform();
     overlay.textContent = '2022';
     if (step === 'katendrecht') {
       drawScrollyYear(2022);
@@ -163,25 +189,20 @@ function drawScrollyYear(year) {
   document.getElementById('year-overlay').textContent = year;
 }
 
-let animationTimer = null;
-function animateYears(from, to, durationMs) {
-  if (animationTimer) clearInterval(animationTimer);
-  const fromIdx = YEARS.indexOf(from);
-  const toIdx = YEARS.indexOf(to);
-  const steps = toIdx - fromIdx;
-  const interval = durationMs / steps;
-  let current = fromIdx;
+// ===== MAP ZOOM / TRANSFORM =====
 
-  drawScrollyYear(YEARS[current]);
-  animationTimer = setInterval(() => {
-    current++;
-    if (current > toIdx) {
-      clearInterval(animationTimer);
-      animationTimer = null;
-      return;
-    }
-    drawScrollyYear(YEARS[current]);
-  }, interval);
+function zoomToSouth() {
+  // Zoom the canvas to focus on Rotterdam-Zuid (lower portion of the map)
+  const canvas = heroCanvas;
+  canvas.style.transition = 'transform 0.6s ease';
+  canvas.style.transformOrigin = '40% 75%'; // focus on south-west area
+  canvas.style.transform = 'scale(1.8)';
+}
+
+function resetMapTransform() {
+  const canvas = heroCanvas;
+  canvas.style.transition = 'transform 0.6s ease';
+  canvas.style.transform = 'scale(1)';
 }
 
 function highlightNeighbourhoods(names, color) {
