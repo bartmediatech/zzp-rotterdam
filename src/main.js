@@ -135,9 +135,13 @@ function handleStepEnter({ element }) {
     resetMapTransform();
     overlay.textContent = '2022';
     annotation.textContent = '';
-    if (step === 'recolor') {
+    if (step === 'setup') {
+      // Still the normal 2022 map — the question is posed, no visual change yet
+      drawScrollyYear(2022);
+    } else if (step === 'recolor') {
+      // NOW the income overlay appears — reader just read what the colors mean
       drawIncomeMap();
-      annotation.textContent = 'Warm = hoog inkomen, koel = laag inkomen';
+      annotation.textContent = 'Inkleuring: gemiddeld inkomen per buurt (CBS 2022)';
     } else if (step === 'contrast') {
       drawIncomeMap();
       highlightNeighbourhoods(['Molenlaankwartier', 'Hillesluis'], null);
