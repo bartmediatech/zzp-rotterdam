@@ -1,26 +1,26 @@
+import scrollama from 'scrollama';
 import { loadGeoData } from './data/loadGeo.js';
-import { setupProjection } from './geo/projection.js';
+import { setupProjection, getPathGenerator } from './geo/projection.js';
 import { renderHeroMap, preRenderAllYears, getCachedYear } from './render/heroMap.js';
 import { LAYOUT, YEARS, COLORS } from './config.js';
-import { getStats, getGrowthStats } from './data/dataUtils.js';
-import { getPathGenerator } from './geo/projection.js';
+import { getStats, getGrowthStats, ratioScale, inkColorScale } from './data/dataUtils.js';
 
 let matched = null;
 let geoData = null;
 let geo = null;
-let currentYear = 2009;
-let currentYearIndex = 0;
-let heroCanvas, heroCtx;
+let cbsData = null;
 
-// Animation state
-let isPlaying = true;
-let holdTimer = 0;
-const HOLD_DURATION = 2500;  // ms to show each year
-const FADE_DURATION = 400;   // ms for cross-fade
-const END_PAUSE = 3000;      // ms to pause at end before looping
-let fadeProgress = 0;
-let isFading = false;
-let lastTimestamp = 0;
+// Scrolly canvas
+let heroCanvas, heroCtx;
+// Explore canvas
+let exploreCanvas, exploreCtx;
+let currentExploreYear = 2022;
+
+// Highlight state
+const TOP_GROWTH = ['Carnisse', 'Tarwewijk', 'Oud Charlois', 'Spangen', 'Hillesluis'];
+const BOTTOM_GROWTH = ['Kralingen Oost', 'Stadsdriehoek', 'Cool'];
+const CONTRAST_WARM = ['Molenlaankwartier', 'Zestienhoven', 'Nieuwe Werk', 'Hillegersberg Zuid'];
+const CONTRAST_COOL = ['Carnisse', 'Tarwewijk', 'Hillesluis', 'Bloemhof', 'Spangen'];
 
 async function init() {
   const result = await loadGeoData();
@@ -28,231 +28,290 @@ async function init() {
   geoData = result.data;
   geo = result.geo;
 
+  // Load CBS joined data
+  const cbsResp = await fetch('/data/cbs-zzp-joined.json');
+  cbsData = await cbsResp.json();
+
   setupProjection(result.geo);
 
+  // Setup scrolly canvas
   heroCanvas = document.getElementById('hero-canvas');
   heroCanvas.width = LAYOUT.heroWidth;
   heroCanvas.height = LAYOUT.heroHeight;
   heroCtx = heroCanvas.getContext('2d');
 
-  // Render first year
-  renderHeroMap(heroCtx, matched, currentYear, geo);
-  updateStatsDisplay();
+  // Initial render
+  renderHeroMap(heroCtx, matched, 2009, geo);
 
-  setupYearSelector();
-  setupSmallMultiples();
-  setupHover();
-  setupPlayPause();
+  // Pre-render all years
+  preRenderAllYears(matched, YEARS, geo);
 
-  // Pre-render all years, then start animation
-  requestIdleCallback(() => {
-    preRenderAllYears(matched, YEARS, geo);
-    updateSmallMultiples();
-    // Start animation loop
-    lastTimestamp = performance.now();
-    requestAnimationFrame(animationFrame);
-  });
+  // Setup scrollama
+  setupScrollama();
+
+  // Setup explore section
+  setupExplore();
 
   document.body.classList.add('loaded');
 }
 
-// --- Animation ---
+// ===== SCROLLAMA =====
 
-function animationFrame(timestamp) {
-  if (!isPlaying) {
-    lastTimestamp = timestamp;
-    requestAnimationFrame(animationFrame);
-    return;
-  }
+function setupScrollama() {
+  const scroller = scrollama();
 
-  const dt = timestamp - lastTimestamp;
-  lastTimestamp = timestamp;
-
-  if (isFading) {
-    // Cross-fading between current year and next
-    fadeProgress += dt;
-    if (fadeProgress >= FADE_DURATION) {
-      // Fade complete — advance to next year
-      isFading = false;
-      fadeProgress = 0;
-      currentYearIndex = (currentYearIndex + 1) % YEARS.length;
-      currentYear = YEARS[currentYearIndex];
-      drawYear(currentYear);
-      syncUI();
-      holdTimer = 0;
-    } else {
-      // Draw cross-fade
-      const t = fadeProgress / FADE_DURATION;
-      const nextIndex = (currentYearIndex + 1) % YEARS.length;
-      const nextYear = YEARS[nextIndex];
-      drawCrossFade(currentYear, nextYear, t);
-    }
-  } else {
-    // Holding on current year
-    holdTimer += dt;
-    const holdTime = (currentYearIndex === YEARS.length - 1) ? END_PAUSE : HOLD_DURATION;
-    if (holdTimer >= holdTime) {
-      // Start fading to next year
-      if (currentYearIndex === YEARS.length - 1) {
-        // Loop back to start
-        currentYearIndex = -1; // will become 0 after fade
-      }
-      isFading = true;
-      fadeProgress = 0;
-    }
-  }
-
-  requestAnimationFrame(animationFrame);
+  scroller
+    .setup({
+      step: '.step',
+      offset: 0.5,
+      debug: false,
+    })
+    .onStepEnter(handleStepEnter);
 }
 
-function drawYear(year) {
+function handleStepEnter({ element }) {
+  const act = element.dataset.act;
+  const step = element.dataset.step;
+
+  // Mark active step
+  document.querySelectorAll('.step').forEach(s => s.classList.remove('is-active'));
+  element.classList.add('is-active');
+
+  const overlay = document.getElementById('year-overlay');
+  const annotation = document.getElementById('map-annotation');
+
+  if (act === '1') {
+    annotation.textContent = '';
+    if (step === 'intro') {
+      drawScrollyYear(2009);
+      overlay.textContent = '2009';
+    } else if (step === 'animate') {
+      // Animate through years quickly
+      animateYears(2009, 2022, 3000);
+    } else if (step === '2022') {
+      drawScrollyYear(2022);
+      overlay.textContent = '2022';
+    }
+  }
+
+  else if (act === '2') {
+    overlay.textContent = '2022';
+    if (step === 'reveal' || step === 'top5') {
+      drawScrollyYear(2022);
+      highlightNeighbourhoods(TOP_GROWTH, '#8B1A1A');
+      annotation.textContent = 'Gemarkeerd: buurten met de sterkste ZZP-groei';
+    } else if (step === 'bottom') {
+      drawScrollyYear(2022);
+      highlightNeighbourhoods(BOTTOM_GROWTH, '#5A6B7A');
+      annotation.textContent = 'Gemarkeerd: buurten met de minste ZZP-groei';
+    }
+  }
+
+  else if (act === '3') {
+    overlay.textContent = '2022';
+    annotation.textContent = '';
+    if (step === 'recolor') {
+      drawIncomeMap();
+      annotation.textContent = 'Warm = hoog inkomen, koel = laag inkomen';
+    } else if (step === 'contrast') {
+      drawIncomeMap();
+      highlightNeighbourhoods(['Molenlaankwartier', 'Hillesluis'], null);
+      annotation.textContent = '€74.600 vs €30.600 gemiddeld inkomen';
+    } else if (step === 'scatter') {
+      drawIncomeMap();
+      annotation.textContent = 'Correlatie ZZP-aandeel vs inkomen: r = 0,70';
+    }
+  }
+
+  else if (act === '4') {
+    overlay.textContent = '2022';
+    if (step === 'katendrecht') {
+      drawScrollyYear(2022);
+      highlightNeighbourhoods(['Katendrecht'], '#C0392B');
+      annotation.textContent = 'Katendrecht: +5,4pp groei, €50.500 inkomen, WOZ €448.000';
+    } else if (step === 'bridge') {
+      drawIncomeMap();
+      highlightNeighbourhoods(['Katendrecht'], '#C0392B');
+      annotation.textContent = '';
+    }
+  }
+
+  else if (act === '5') {
+    annotation.textContent = '';
+    if (step === 'stats') {
+      drawIncomeMap();
+      overlay.textContent = '';
+      annotation.textContent = 'Lage-inkomensbuurten: +4,5pp — Hoge-inkomensbuurten: +3,4pp';
+    } else if (step === 'future' || step === 'end') {
+      drawScrollyYear(2022);
+      overlay.textContent = '2022';
+      annotation.textContent = '';
+    }
+  }
+}
+
+// ===== DRAWING FUNCTIONS =====
+
+function drawScrollyYear(year) {
   const cached = getCachedYear(year);
+  heroCtx.clearRect(0, 0, LAYOUT.heroWidth, LAYOUT.heroHeight);
   if (cached) {
-    heroCtx.clearRect(0, 0, LAYOUT.heroWidth, LAYOUT.heroHeight);
     heroCtx.drawImage(cached, 0, 0);
   } else {
-    heroCtx.clearRect(0, 0, LAYOUT.heroWidth, LAYOUT.heroHeight);
     renderHeroMap(heroCtx, matched, year, geo);
   }
+  document.getElementById('year-overlay').textContent = year;
 }
 
-function drawCrossFade(yearA, yearB, t) {
-  const cachedA = getCachedYear(yearA);
-  const cachedB = getCachedYear(yearB);
-  heroCtx.clearRect(0, 0, LAYOUT.heroWidth, LAYOUT.heroHeight);
+let animationTimer = null;
+function animateYears(from, to, durationMs) {
+  if (animationTimer) clearInterval(animationTimer);
+  const fromIdx = YEARS.indexOf(from);
+  const toIdx = YEARS.indexOf(to);
+  const steps = toIdx - fromIdx;
+  const interval = durationMs / steps;
+  let current = fromIdx;
 
-  if (cachedA) {
-    heroCtx.globalAlpha = 1 - t;
-    heroCtx.drawImage(cachedA, 0, 0);
+  drawScrollyYear(YEARS[current]);
+  animationTimer = setInterval(() => {
+    current++;
+    if (current > toIdx) {
+      clearInterval(animationTimer);
+      animationTimer = null;
+      return;
+    }
+    drawScrollyYear(YEARS[current]);
+  }, interval);
+}
+
+function highlightNeighbourhoods(names, color) {
+  const pathGen = getPathGenerator();
+  const nameSet = new Set(names.map(n => n.toLowerCase()));
+
+  heroCtx.save();
+  // Dim everything first
+  heroCtx.fillStyle = 'rgba(245, 240, 232, 0.55)';
+  heroCtx.fillRect(0, 0, LAYOUT.heroWidth, LAYOUT.heroHeight);
+
+  // Redraw highlighted neighbourhoods on top
+  for (const { feature, data } of matched) {
+    if (!nameSet.has(data.name.toLowerCase())) continue;
+    const geoPath = pathGen(feature);
+    if (!geoPath) continue;
+    const path = new Path2D(geoPath);
+
+    // Clip to this neighbourhood and redraw from cache
+    heroCtx.save();
+    heroCtx.clip(path);
+    const cached = getCachedYear(parseInt(document.getElementById('year-overlay').textContent) || 2022);
+    if (cached) heroCtx.drawImage(cached, 0, 0);
+    heroCtx.restore();
+
+    // Add colored border
+    if (color) {
+      heroCtx.save();
+      heroCtx.strokeStyle = color;
+      heroCtx.lineWidth = 2.5;
+      heroCtx.globalAlpha = 0.8;
+      heroCtx.stroke(path);
+      heroCtx.restore();
+    }
   }
-  if (cachedB) {
-    heroCtx.globalAlpha = t;
-    heroCtx.drawImage(cachedB, 0, 0);
+  heroCtx.restore();
+}
+
+function drawIncomeMap() {
+  // Redraw the map but with income-based coloring
+  const pathGen = getPathGenerator();
+  const { heroWidth, heroHeight } = LAYOUT;
+
+  // Start from the paper texture (cached 2022 as base)
+  const cached = getCachedYear(2022);
+  heroCtx.clearRect(0, 0, heroWidth, heroHeight);
+  if (cached) heroCtx.drawImage(cached, 0, 0);
+
+  // Overlay income-based coloring
+  if (!cbsData) return;
+  const medianIncome = cbsData.meta.medianIncome;
+
+  for (const { feature, data } of matched) {
+    const geoPath = pathGen(feature);
+    if (!geoPath) continue;
+    const path = new Path2D(geoPath);
+
+    // Find CBS data for this neighbourhood
+    const cbsEntry = cbsData.joined.find(j =>
+      j.naam.toLowerCase() === data.name.toLowerCase()
+    );
+    if (!cbsEntry || !cbsEntry.inkomenPerOntvanger) continue;
+
+    const income = cbsEntry.inkomenPerOntvanger;
+    const isHigh = income >= medianIncome;
+
+    heroCtx.save();
+    heroCtx.globalAlpha = 0.2;
+    heroCtx.fillStyle = isHigh ? '#8B1A1A' : '#2C3E50';
+    heroCtx.fill(path);
+    heroCtx.restore();
   }
-  heroCtx.globalAlpha = 1;
+
+  document.getElementById('year-overlay').textContent = '2022';
 }
 
-function syncUI() {
-  // Update year buttons
-  document.querySelectorAll('.year-btn').forEach(btn => {
-    btn.classList.toggle('active', parseInt(btn.textContent) === currentYear);
-  });
-  // Update small multiples
-  document.querySelectorAll('.sm-item').forEach(el => {
-    el.classList.toggle('active', parseInt(el.dataset.year) === currentYear);
-  });
-  // Update year overlay
-  const overlay = document.getElementById('year-overlay');
-  if (overlay) overlay.textContent = currentYear;
-  // Update stats
-  updateStatsDisplay();
-  // Update locked tooltip if one is active
-  updateLockedTooltip();
-}
+// ===== EXPLORE SECTION =====
 
-// --- Year selector ---
+function setupExplore() {
+  exploreCanvas = document.getElementById('explore-canvas');
+  if (!exploreCanvas) return;
+  exploreCanvas.width = LAYOUT.heroWidth;
+  exploreCanvas.height = LAYOUT.heroHeight;
+  exploreCtx = exploreCanvas.getContext('2d');
 
-function setupYearSelector() {
+  // Draw 2022
+  drawExploreYear(2022);
+
+  // Year buttons
   const container = document.getElementById('year-selector');
-
   for (const year of YEARS) {
     const btn = document.createElement('button');
-    btn.className = `year-btn ${year === currentYear ? 'active' : ''}`;
+    btn.className = `year-btn ${year === 2022 ? 'active' : ''}`;
     btn.textContent = year;
     btn.addEventListener('click', () => {
-      // Pause animation and jump to this year
-      isPlaying = false;
-      updatePlayButton();
-      selectYear(year);
+      currentExploreYear = year;
+      drawExploreYear(year);
+      document.querySelectorAll('.year-btn').forEach(b =>
+        b.classList.toggle('active', parseInt(b.textContent) === year)
+      );
+      updateStatsDisplay();
+      updateLockedTooltip();
     });
     container.appendChild(btn);
   }
+
+  updateStatsDisplay();
+  setupHover();
 }
 
-function selectYear(year) {
-  currentYear = year;
-  currentYearIndex = YEARS.indexOf(year);
-  holdTimer = 0;
-  isFading = false;
-  fadeProgress = 0;
-
-  drawYear(year);
-  syncUI();
-}
-
-// --- Play/Pause ---
-
-function setupPlayPause() {
-  const btn = document.getElementById('play-pause');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    isPlaying = !isPlaying;
-    if (isPlaying) {
-      lastTimestamp = performance.now();
-      holdTimer = 0;
-    }
-    updatePlayButton();
-  });
-  updatePlayButton();
-}
-
-function updatePlayButton() {
-  const btn = document.getElementById('play-pause');
-  if (!btn) return;
-  btn.textContent = isPlaying ? '❚❚' : '▶';
-  btn.title = isPlaying ? 'Pauzeer' : 'Afspelen';
-}
-
-// --- Small multiples ---
-
-function setupSmallMultiples() {
-  const container = document.getElementById('small-multiples');
-
-  for (const year of YEARS) {
-    const item = document.createElement('div');
-    item.className = `sm-item ${year === currentYear ? 'active' : ''}`;
-    item.dataset.year = year;
-
-    const cvs = document.createElement('canvas');
-    cvs.width = LAYOUT.smallMultipleWidth;
-    cvs.height = LAYOUT.smallMultipleHeight;
-    cvs.className = 'sm-canvas';
-    item.appendChild(cvs);
-
-    const label = document.createElement('span');
-    label.className = 'sm-label';
-    label.textContent = year;
-    item.appendChild(label);
-
-    item.addEventListener('click', () => {
-      isPlaying = false;
-      updatePlayButton();
-      selectYear(year);
-    });
-    container.appendChild(item);
+function drawExploreYear(year) {
+  const cached = getCachedYear(year);
+  exploreCtx.clearRect(0, 0, LAYOUT.heroWidth, LAYOUT.heroHeight);
+  if (cached) {
+    exploreCtx.drawImage(cached, 0, 0);
+  } else {
+    renderHeroMap(exploreCtx, matched, year, geo);
   }
+  const overlay = document.getElementById('explore-year-overlay');
+  if (overlay) overlay.textContent = year;
 }
 
-function updateSmallMultiples() {
-  document.querySelectorAll('.sm-item').forEach(item => {
-    const year = parseInt(item.dataset.year);
-    const cached = getCachedYear(year);
-    if (!cached) return;
+// ===== HOVER + TOOLTIP (explore section) =====
 
-    const cvs = item.querySelector('.sm-canvas');
-    const ctx = cvs.getContext('2d');
-    ctx.drawImage(cached, 0, 0, LAYOUT.heroWidth, LAYOUT.heroHeight,
-      0, 0, LAYOUT.smallMultipleWidth, LAYOUT.smallMultipleHeight);
-  });
-}
-
-// --- Tooltip HTML generation ---
+let lockedNeighbourhood = null;
 
 function buildTooltipHTML(data, isLocked) {
-  const stats = getStats(data, currentYear);
-  const growth = getGrowthStats(data, currentYear);
+  const stats = getStats(data, currentExploreYear);
+  const growth = getGrowthStats(data, currentExploreYear);
 
-  // Sparkline
   const vals = YEARS.map(y => {
     const d = data.years[y];
     if (!d || d.zzp == null || d.geen == null) return 0;
@@ -262,7 +321,7 @@ function buildTooltipHTML(data, isLocked) {
   const sparkW = 140, sparkH = 28;
   let sparkPath = '';
   let currentDot = '';
-  const currentIdx = YEARS.indexOf(currentYear);
+  const currentIdx = YEARS.indexOf(currentExploreYear);
   for (let i = 0; i < vals.length; i++) {
     const sx = (i / (vals.length - 1)) * sparkW;
     const sy = sparkH - (vals[i] / maxVal) * sparkH;
@@ -272,9 +331,8 @@ function buildTooltipHTML(data, isLocked) {
     }
   }
 
-  // Growth indicator
   let growthHTML = '';
-  if (growth && currentYear !== growth.earliestYear) {
+  if (growth && currentExploreYear !== growth.earliestYear) {
     const sign = growth.ppChange >= 0 ? '+' : '';
     const color = growth.ppChange >= 0 ? '#8B1A1A' : '#2C3E50';
     const relSign = growth.relativeGrowth >= 0 ? '+' : '';
@@ -287,34 +345,39 @@ function buildTooltipHTML(data, isLocked) {
     `;
   }
 
+  // Add CBS income if available
+  let incomeHTML = '';
+  if (cbsData) {
+    const cbsEntry = cbsData.joined.find(j => j.naam.toLowerCase() === data.name.toLowerCase());
+    if (cbsEntry && cbsEntry.inkomenPerOntvanger) {
+      incomeHTML = `<div class="tt-total">Gem. inkomen: €${cbsEntry.inkomenPerOntvanger.toLocaleString('nl-NL')}${cbsEntry.wozGemiddeld ? ' · WOZ: €' + cbsEntry.wozGemiddeld.toLocaleString('nl-NL') : ''}</div>`;
+    }
+  }
+
   return `
     ${isLocked ? '<div class="tt-close" title="Sluiten">✕</div>' : ''}
     <div class="tt-name">${data.name}</div>
-    <div class="tt-year">${currentYear}</div>
+    <div class="tt-year">${currentExploreYear}</div>
     <div class="tt-stats">
       <span class="tt-zzp">${stats.zzp.toLocaleString('nl-NL')} ZZP-ers</span>
       <span class="tt-ratio">(${(stats.ratio * 100).toFixed(1)}%)</span>
     </div>
     <div class="tt-total">${stats.total.toLocaleString('nl-NL')} totaal</div>
+    ${incomeHTML}
     ${growthHTML}
     <div class="tt-sparkline">
       <svg width="${sparkW}" height="${sparkH}">
         <path d="${sparkPath}" fill="none" stroke="#8B1A1A" stroke-width="1.5" opacity="0.6"/>
         ${currentDot}
       </svg>
-      <div class="tt-spark-labels">
-        <span>2009</span><span>2022</span>
-      </div>
+      <div class="tt-spark-labels"><span>2009</span><span>2022</span></div>
       <div class="tt-spark-caption">ZZP-er % over de tijd</div>
     </div>
   `;
 }
 
-// --- Hover + Click-to-lock ---
-
-let lockedNeighbourhood = null; // { data, x, y } when locked
-
 function setupHover() {
+  if (!exploreCanvas) return;
   const tooltip = document.getElementById('tooltip');
   const pathGen = getPathGenerator();
   const hitPaths = matched.map(({ feature, data }) => {
@@ -325,12 +388,11 @@ function setupHover() {
   const hitCtx = hitCanvas.getContext('2d');
 
   function hitTest(clientX, clientY) {
-    const rect = heroCanvas.getBoundingClientRect();
+    const rect = exploreCanvas.getBoundingClientRect();
     const scaleX = LAYOUT.heroWidth / rect.width;
     const scaleY = LAYOUT.heroHeight / rect.height;
     const x = (clientX - rect.left) * scaleX;
     const y = (clientY - rect.top) * scaleY;
-
     for (const { path, data } of hitPaths) {
       if (!path) continue;
       if (hitCtx.isPointInPath(path, x, y)) return data;
@@ -338,121 +400,79 @@ function setupHover() {
     return null;
   }
 
-  function renderTooltip(data, posX, posY) {
+  function showTooltip(data, posX, posY) {
     tooltip.style.display = 'block';
     tooltip.style.left = `${posX + 16}px`;
     tooltip.style.top = `${posY - 10}px`;
-
     tooltip.innerHTML = buildTooltipHTML(data, !!lockedNeighbourhood);
-
-    // Keep tooltip on screen
     const tr = tooltip.getBoundingClientRect();
-    if (tr.right > window.innerWidth - 10) {
-      tooltip.style.left = `${posX - tr.width - 16}px`;
-    }
-    if (tr.bottom > window.innerHeight - 10) {
-      tooltip.style.top = `${posY - tr.height - 10}px`;
-    }
-
-    // Wire close button if locked
-    if (lockedNeighbourhood) {
-      const closeBtn = tooltip.querySelector('.tt-close');
-      if (closeBtn) {
-        closeBtn.addEventListener('click', (e) => {
-          e.stopPropagation();
-          unlockTooltip();
-        });
-      }
-    }
+    if (tr.right > window.innerWidth - 10) tooltip.style.left = `${posX - tr.width - 16}px`;
+    if (tr.bottom > window.innerHeight - 10) tooltip.style.top = `${posY - tr.height - 10}px`;
+    if (lockedNeighbourhood) wireCloseButton();
   }
 
-  function unlockTooltip() {
+  function wireCloseButton() {
+    const closeBtn = tooltip.querySelector('.tt-close');
+    if (closeBtn) closeBtn.addEventListener('click', (e) => { e.stopPropagation(); unlock(); });
+  }
+
+  function unlock() {
     lockedNeighbourhood = null;
     tooltip.style.display = 'none';
     tooltip.classList.remove('locked');
-    heroCanvas.style.cursor = 'default';
   }
 
-  // Mousemove: show hover tooltip (only when not locked)
-  heroCanvas.addEventListener('mousemove', (e) => {
-    if (lockedNeighbourhood) return; // don't move tooltip when locked
-
+  exploreCanvas.addEventListener('mousemove', (e) => {
+    if (lockedNeighbourhood) return;
     const data = hitTest(e.clientX, e.clientY);
     if (data) {
-      renderTooltip(data, e.clientX, e.clientY);
-      heroCanvas.style.cursor = 'pointer';
+      showTooltip(data, e.clientX, e.clientY);
+      exploreCanvas.style.cursor = 'pointer';
     } else {
       tooltip.style.display = 'none';
-      heroCanvas.style.cursor = 'default';
+      exploreCanvas.style.cursor = 'default';
     }
   });
 
-  // Click: lock/unlock tooltip
-  heroCanvas.addEventListener('click', (e) => {
+  exploreCanvas.addEventListener('click', (e) => {
     const data = hitTest(e.clientX, e.clientY);
-
     if (lockedNeighbourhood) {
-      if (data && data.id === lockedNeighbourhood.data.id) {
-        // Clicking same neighbourhood: unlock
-        unlockTooltip();
-      } else if (data) {
-        // Clicking different neighbourhood: switch lock
+      if (data && data.id === lockedNeighbourhood.data.id) { unlock(); }
+      else if (data) {
         lockedNeighbourhood = { data, x: e.clientX, y: e.clientY };
         tooltip.classList.add('locked');
-        renderTooltip(data, e.clientX, e.clientY);
-        // Pause animation so user can compare years
-        isPlaying = false;
-        updatePlayButton();
-      } else {
-        // Clicking empty space: unlock
-        unlockTooltip();
-      }
+        showTooltip(data, e.clientX, e.clientY);
+      } else { unlock(); }
     } else if (data) {
-      // Lock onto this neighbourhood
       lockedNeighbourhood = { data, x: e.clientX, y: e.clientY };
       tooltip.classList.add('locked');
-      renderTooltip(data, e.clientX, e.clientY);
-      // Pause animation
-      isPlaying = false;
-      updatePlayButton();
+      showTooltip(data, e.clientX, e.clientY);
     }
   });
 
-  heroCanvas.addEventListener('mouseleave', () => {
-    if (!lockedNeighbourhood) {
-      tooltip.style.display = 'none';
-    }
+  exploreCanvas.addEventListener('mouseleave', () => {
+    if (!lockedNeighbourhood) tooltip.style.display = 'none';
   });
 }
 
-// Called from syncUI when year changes — update locked tooltip if active
 function updateLockedTooltip() {
   if (!lockedNeighbourhood) return;
   const tooltip = document.getElementById('tooltip');
-  const { data } = lockedNeighbourhood;
-
-  tooltip.innerHTML = buildTooltipHTML(data, true);
-
+  tooltip.innerHTML = buildTooltipHTML(lockedNeighbourhood.data, true);
   const closeBtn = tooltip.querySelector('.tt-close');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', (e) => {
-      e.stopPropagation();
-      lockedNeighbourhood = null;
-      tooltip.style.display = 'none';
-      tooltip.classList.remove('locked');
-    });
-  }
+  if (closeBtn) closeBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    lockedNeighbourhood = null;
+    tooltip.style.display = 'none';
+    tooltip.classList.remove('locked');
+  });
 }
-
-// --- Stats ---
 
 function updateStatsDisplay() {
   const el = document.getElementById('stats-display');
   if (!el || !geoData) return;
-
-  const totals = geoData.totals[currentYear];
+  const totals = geoData.totals[currentExploreYear];
   if (!totals) return;
-
   const total = totals.zzp + totals.geen;
   const pct = ((totals.zzp / total) * 100).toFixed(1);
   el.innerHTML = `<strong>${totals.zzp.toLocaleString('nl-NL')}</strong> ZZP-ers in Rotterdam — ${pct}% van de beroepsbevolking`;

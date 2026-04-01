@@ -3,22 +3,91 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>ZZP-ers in Rotterdam — Visualisatie per buurt</title>
+  <title>De Twee Gezichten van de ZZP-er — Rotterdam</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
-  <div class="page">
-    <header class="header">
-      <h1 class="title">ZZP-ers in Rotterdam</h1>
-      <p class="subtitle">ZZP-ers per buurt in Rotterdam, 2009–2022</p>
-    </header>
+  <!-- Hero intro -->
+  <header class="intro">
+    <h1 class="intro-title">De Twee Gezichten<br>van de ZZP-er</h1>
+    <p class="intro-subtitle">Hoe zelfstandig ondernemerschap twee verschillende werkelijkheden onthult in Rotterdam</p>
+    <div class="intro-scroll-hint">Scroll om te beginnen ↓</div>
+  </header>
 
-    <div class="hero-container">
+  <!-- Scrollytelling section: sticky map + scrolling text -->
+  <section id="scrolly" class="scrolly">
+    <div class="scrolly-map" id="scrolly-map">
       <canvas id="hero-canvas"></canvas>
       <div id="year-overlay" class="year-overlay">2009</div>
+      <div id="map-annotation" class="map-annotation"></div>
+    </div>
+
+    <div class="scrolly-text" id="scrolly-text">
+      <!-- Act 1: De Groei -->
+      <div class="step" data-act="1" data-step="intro">
+        <p>In <strong>2009</strong> was 5,2% van de Rotterdamse beroepsbevolking ZZP-er.</p>
+      </div>
+      <div class="step" data-act="1" data-step="animate">
+        <p>In dertien jaar groeide dat naar bijna <strong>10%</strong>. Van 24.184 naar 47.814 zelfstandigen — een stijging van 97%.</p>
+      </div>
+      <div class="step" data-act="1" data-step="2022">
+        <p>Maar de groei was niet overal gelijk verdeeld.</p>
+      </div>
+
+      <!-- Act 2: De Verrassing -->
+      <div class="step" data-act="2" data-step="reveal">
+        <p>De snelste groei zat niet waar je verwacht. Niet in de villawijken van het noorden, maar in <strong>Rotterdam-Zuid</strong>.</p>
+      </div>
+      <div class="step" data-act="2" data-step="top5">
+        <p><strong>Carnisse</strong> ging van 4,0% naar 11,5%. <strong>Tarwewijk</strong> van 4,0% naar 10,3%. <strong>Oud Charlois</strong>, <strong>Spangen</strong>, <strong>Hillesluis</strong> — allemaal meer dan verdubbeld.</p>
+      </div>
+      <div class="step" data-act="2" data-step="bottom">
+        <p>Intussen nauwelijks beweging in Kralingen Oost (+0,8pp), Stadsdriehoek (+1,6pp) en Cool (+1,8pp). De welvarende buurten waren al verzadigd.</p>
+      </div>
+
+      <!-- Act 3: De Twee Gezichten -->
+      <div class="step" data-act="3" data-step="recolor">
+        <p>Dezelfde vier letters — Z, Z, P — dekken twee totaal verschillende werkelijkheden.</p>
+      </div>
+      <div class="step" data-act="3" data-step="contrast">
+        <p>In <strong class="accent-warm">Molenlaankwartier</strong> verdient de ZZP-er gemiddeld €74.600 per jaar. In <strong class="accent-cool">Hillesluis</strong> is dat €30.600. Beide buurten hebben een bovengemiddeld aandeel zelfstandigen.</p>
+      </div>
+      <div class="step" data-act="3" data-step="scatter">
+        <p>Landelijk zijn de grootste ZZP-sectoren: zakelijke dienstverlening (27%), bouw (14%) en zorg (13%). In de ene buurt is de ZZP-er een consultant. In de andere een bouwvakker.</p>
+      </div>
+
+      <!-- Act 4: De Uitzondering -->
+      <div class="step" data-act="4" data-step="katendrecht">
+        <p>En dan is er <strong>Katendrecht</strong>. +5,4pp groei, een gemiddeld inkomen van €50.500 en een WOZ-waarde van €448.000.</p>
+      </div>
+      <div class="step" data-act="4" data-step="bridge">
+        <p>Katendrecht was ooit een volkswijk. Nu heeft het de WOZ van Hillegersberg en het ZZP-aandeel van Middelland. De enige buurt waar de gentrificatie-these klopt.</p>
+      </div>
+
+      <!-- Act 5: Het Kruispunt -->
+      <div class="step" data-act="5" data-step="stats">
+        <p>Lage-inkomensbuurten groeiden gemiddeld <strong>1,3×</strong> sneller in ZZP-aandeel dan welvarende buurten. +4,5 procentpunt versus +3,4.</p>
+      </div>
+      <div class="step" data-act="5" data-step="future">
+        <p>De ZZP-groei vertraagt landelijk — in 2024 was de stijging 44% lager dan het jaar ervoor, mede door handhaving op schijnzelfstandigheid.</p>
+      </div>
+      <div class="step" data-act="5" data-step="end">
+        <p>De vraag is niet <em>of</em> Rotterdam meer ZZP-ers krijgt, maar welk gezicht de nieuwe ZZP-er zal dragen.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Post-scrolly: interactive exploration -->
+  <section class="explore-section">
+    <h2 class="explore-title">Verken zelf</h2>
+    <p class="explore-subtitle">Klik op een buurt voor details. Wissel van jaar om de verandering te zien.</p>
+
+    <div class="hero-container">
+      <canvas id="explore-canvas"></canvas>
+      <div id="explore-year-overlay" class="year-overlay">2022</div>
     </div>
 
     <div class="controls">
@@ -31,19 +100,14 @@
     </div>
 
     <div class="year-controls">
-      <button id="play-pause" class="play-pause" title="Pauzeer">❚❚</button>
       <div id="year-selector" class="year-selector"></div>
     </div>
+  </section>
 
-    <div class="sm-section">
-      <p class="sm-title">Alle jaren</p>
-      <div id="small-multiples" class="small-multiples"></div>
-    </div>
-
-    <footer class="footer">
-      <p>Bron: CBS, bewerking OBI &middot; onderzoek010.nl &middot; 1 inktstreek &asymp; 1 ZZP-er</p>
-    </footer>
-  </div>
+  <footer class="footer">
+    <p>Bron: CBS Kerncijfers wijken en buurten 2022, CBS/OBI via onderzoek010.nl, KVK ZZP-monitor</p>
+    <p class="footer-meta">Data-visualisatie door Bart van Son, 2026</p>
+  </footer>
 
   <div id="tooltip" class="tooltip"></div>
 
