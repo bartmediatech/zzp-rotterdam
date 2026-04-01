@@ -32,6 +32,8 @@ async function init() {
   setupYearSelector();
   updateStats();
   setupHover();
+
+  document.body.classList.add('loaded');
 }
 
 function drawYear(year) {
